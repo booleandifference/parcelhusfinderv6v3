@@ -1,0 +1,38 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: #4f6b88; /* This is a dark blue color, you can adjust it to your preference */
+  color: #ffffff; /* This sets the default text color to white for better contrast */
+}
+
+.App {
+  min-height: 100vh;
+  background-color: #60778f; /* This ensures the App component also has the dark blue background */
+}
+
+/* You might want to adjust other elements for better contrast */
+input[type="text"], input[type="range"] {
+  background-color: #2c3e50; /* A slightly lighter blue for form elements */
+  color: #ffffff;
+  border: 1px solid #34495e;
+}
+
+button {
+  background-color: #3498db; /* A brighter blue for buttons */
+  color: #ffffff;
+}
+
+button:hover {
+  background-color: #2980b9; /* A darker shade for button hover state */
+}
+
+.loading-indicator, .error-message {
+  background-color: #2c3e50; /* Adjust the background of these elements */
+}
+
+.gallery-item {
+  background-color: #2c3e50; /* Adjust the background of gallery items */
+}
+
+/* You may need to adjust other specific elements as well */

@@ -1,0 +1,50 @@
+.info-page {
+    font-family: 'Roboto Mono', monospace;
+    color: white;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  
+  .info-page h2 {
+    font-weight: 300;
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .info-page p {
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  
+  .info-page p2 {
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    text-align: left;
+  }
+  .info-page a {
+    color: #add8e6; /* Light blue color, adjust as needed */
+    text-decoration: none;
+  }
+  
+  .info-page a:hover {
+    text-decoration: underline;
+  }
+  
+  .back-link {
+    display: inline-block;
+    color: white;
+    text-decoration: none;
+    border: 1px solid white;
+    padding: 8px 16px;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    font-size: 12px;
+  }
+  
+  .back-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }

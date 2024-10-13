@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@100;300;400&display=swap');
+
+.street-view-button {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 100;
+    font-size: 14px; /* Adjust font size */
+  
+}
+
+.street-view-button h3 {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 100;
+    font-size: 14px; /* Adjust font size */
+  
+}
+
+.explorer-text {
+    font-family: 'Roboto Mono', monospace;
+  font-weight: 100; /* This is the thinnest available weight for Lato */
+  font-size: 18px; /* Adjust as needed */
+  color: white;
+}
+
+.explorer-text h3 {
+    font-family: 'Roboto Mono', monospace;
+  font-weight: 100; /* This is the thinnest available weight for Lato */
+  font-size: 14px; /* Adjust as needed */
+  color: white;
+}
+.line {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background-color: white;
+  margin: 10px 0;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.flight-icon {
+  color: white;
+  font-size: 30px;
+  margin-left: 8px;
+}
+
+.icon-button:hover .flight-icon {
+  opacity: 0.8;
+}
