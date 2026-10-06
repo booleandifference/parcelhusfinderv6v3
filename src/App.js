@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
 import PromptForm from './components/PromptForm';
 import StreetViewButton from './components/StreetViewButton';
 import AudioPlayer from './components/AudioPlayer';
-import Info from './components/Info'; // You'll create this component
+import ImageGallery from './components/ImageGallery'; // Import ImageGallery
+import Info from './components/info'; // You'll create this component
 import './App.css';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
               <span className="title-line"></span>
               <main>
                 <PromptForm />
+                <ImageGallery />
               </main>
             </div>
           } />

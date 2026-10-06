@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import './Info.css';
+import './info.css';
 
 function Info() {
   return (
