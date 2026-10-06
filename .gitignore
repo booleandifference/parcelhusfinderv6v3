@@ -33,3 +33,6 @@ yarn-error.log*
 
 # Firebase deploy cache
 .firebase/
+
+# Local Claude Code config
+.claude/
