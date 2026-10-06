@@ -1,78 +1,125 @@
-require("dotenv").config();
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const axios = require("axios");
-const cors = require("cors")({ origin: true });
+const functions = require('firebase-functions/v1');
+const { defineSecret } = require('firebase-functions/params');
+const express = require('express');
+const cors = require('cors');
+const { fal } = require('@fal-ai/client');
+const admin = require('firebase-admin');
+const axios = require('axios');
+const crypto = require('crypto');
 
-admin.initializeApp();
-
-exports.helloWorld = functions.https.onRequest((req, res) => {
-  res.send("Hello from Firebase!");
+admin.initializeApp({
+  storageBucket: "parcelhusfinderv6v3.appspot.com",
+  databaseURL: "https://parcelhusfinderv6v3-default-rtdb.europe-west1.firebasedatabase.app"
 });
 
-exports.getAudioSignedUrl = functions.https.onRequest((req, res) => {
-  cors(req, res, async () => {
-    try {
-      console.log('Starting to access Firebase Storage bucket...');
+// fal.ai API key, stored in Secret Manager: firebase functions:secrets:set FAL_KEY
+const falKey = defineSecret('FAL_KEY');
 
-      const bucket = admin.storage().bucket('parcelhusfinderv6.appspot.com');
-      const file = bucket.file('Audio/Parcelhus_history.wav');
+// Parcelhus LoRA trained with fal-ai/flux-lora-fast-training (backup copy in LORA/)
+const PARCELHUS_LORA_URL = "https://storage.googleapis.com/fal-flux-lora/210f00b7dd4847439a5fa91f2f69c994_pytorch_lora_weights.safetensors";
+const PARCELHUS_TRIGGER_WORD = "&SHUFL";
 
-      console.log('Checking if the file exists in Firebase Storage...');
+const app = express();
 
-      // Check if the file exists
-      const [exists] = await file.exists();
-      if (!exists) {
-        console.error('File does not exist:', file.name);
-        return res.status(404).send('File not found');
-      }
+app.use(cors({ origin: true }));
+app.use(express.json());
 
-      console.log('File exists, generating signed URL...');
-
-      // Generate signed URL
-      const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 1000 * 60 * 60, // URL expires in 1 hour
-      });
-
-      console.log('Signed URL generated successfully:', signedUrl);
-
-      // Send the signed URL
-      res.status(200).json({ signedUrl });
-    } catch (error) {
-      console.error('Error generating signed URL:', error); // Log the full error
-      res.status(500).send('Error generating signed URL');
-    }
-  });
-});
-
-
-exports.generateImage = functions.https.onCall(async (data, context) => {
-  const { prompt } = data;
-
-  // Add the default string before the user's input
-  const defaultPrompt = "a realistic architectural photography of a Danish parcelhus house";
-
-  // Combine the default prompt with the user-provided input
-  const fullPrompt = `${defaultPrompt} ${prompt}`;
-
-  // Output the full prompt to the console for debugging
-  console.log('Full Prompt being sent to Flux API:', fullPrompt);
-
+app.post('/generate-image', async (req, res) => {
   try {
-    // Call the Flux API to generate the image with the combined prompt
-    const fluxResponse = await axios.post(process.env.FLUX_API_ENDPOINT,
-      { prompt: fullPrompt },  // Use fullPrompt here
-      { headers: { "Authorization": `Bearer ${process.env.FLUX_API_KEY}` } },
-    );
-    
-    // Assuming the response has the image URL
-    const imageUrl = fluxResponse.data.image_url;
+    const { prompt, loraScale } = req.body;
+    console.log("Received request with prompt:", prompt, "and loraScale:", loraScale);
 
-    return { imageUrl };
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: "Prompt is required" });
+    }
+    // The slider in the frontend goes from 0.5 (less parcelhus) to 1 (more parcelhus)
+    const scale = Math.min(Math.max(Number(loraScale) || 0.8, 0), 1.5);
+
+    const defaultPrompt = `a realistic architectural photography of a Danish ${PARCELHUS_TRIGGER_WORD} parcelhus house`;
+    const fullPrompt = `${defaultPrompt} ${prompt}`;
+    console.log("Full prompt:", fullPrompt);
+
+    fal.config({ credentials: falKey.value() });
+
+    const result = await fal.subscribe("fal-ai/flux-lora", {
+      input: {
+        prompt: fullPrompt,
+        loras: [{ path: PARCELHUS_LORA_URL, scale }],
+        seed: Math.floor(Math.random() * 1000000),
+        image_size: "landscape_4_3",
+        num_images: 1
+      },
+    });
+    console.log("fal.subscribe result:", JSON.stringify(result.data));
+
+    const images = result.data && result.data.images;
+    if (images && images.length > 0) {
+      const imageUrl = images[0].url;
+      console.log("Generated Image URL:", imageUrl);
+
+      // Upload to Firebase Storage
+      const bucket = admin.storage().bucket();
+      const fileName = `generated_images/${Date.now()}.jpg`;
+      const file = bucket.file(fileName);
+      console.log("Uploading image to Firebase Storage as:", fileName);
+
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      console.log("Image downloaded from external URL.");
+
+      // A Firebase download token gives a permanent URL. Signed URLs break when
+      // Google rotates the service account key that signed them.
+      const downloadToken = crypto.randomUUID();
+      const buffer = Buffer.from(response.data, 'binary');
+      await file.save(buffer, {
+        metadata: {
+          contentType: 'image/jpeg',
+          metadata: { firebaseStorageDownloadTokens: downloadToken },
+        },
+      });
+      console.log("Image uploaded to Firebase Storage.");
+
+      const firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media&token=${downloadToken}`;
+      console.log("Download URL:", firebaseUrl);
+
+      res.json({ imageUrl, firebaseUrl });
+    } else {
+      console.error("No image was generated by fal.subscribe.");
+      res.status(400).json({ error: "No image was generated" });
+    }
   } catch (error) {
-    console.error('Error calling Flux API:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to generate image');
+    console.error("Error generating or uploading image:", error);
+    res.status(500).json({ error: error.message || "Error generating or uploading image" });
   }
 });
 
+app.get('/get-audio-file', async (req, res) => {
+  const bucket = admin.storage().bucket();
+  const filePath = 'audio/Parcelhus_history.wav';
+  const file = bucket.file(filePath);
+  console.log(`Received request to fetch audio file: ${filePath}`);
+
+  try {
+    const [metadata] = await file.getMetadata();
+
+    res.setHeader('Content-Type', metadata.contentType || 'audio/wav');
+    res.setHeader('Content-Length', metadata.size);
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    const readStream = file.createReadStream();
+
+    readStream.on('error', (err) => {
+      console.error('Error streaming audio file:', err);
+      res.status(500).send('Error streaming audio file');
+    });
+
+    readStream.pipe(res);
+    console.log("Streaming audio file successfully.");
+  } catch (error) {
+    console.error('Error accessing audio file:', error);
+    res.status(500).send('Error accessing audio file');
+  }
+});
+
+exports.api = functions
+  .runWith({ secrets: [falKey], timeoutSeconds: 120, memory: '256MB' })
+  .https.onRequest(app);
