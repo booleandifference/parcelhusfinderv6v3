@@ -26,3 +26,7 @@ yarn-error.log*
 *.safetensors
 /02 parcelhus finder files/
 *.zip
+
+# environment files with secrets
+.env
+**/.env
