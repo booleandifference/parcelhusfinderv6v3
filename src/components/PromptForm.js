@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref as dbRef, push, onValue } from "firebase/database";
+import { getDatabase, ref as dbRef, push } from "firebase/database";
 import ImageDisplay from './ImageDisplay';
 import axios from 'axios';
 import './PromptForm.css';
@@ -16,7 +15,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-const storage = getStorage(app);
 
 function PromptForm() {
  const [prompt, setPrompt] = useState('');
@@ -26,33 +24,7 @@ function PromptForm() {
  const [error, setError] = useState('');
  const [simulatedProgress, setSimulatedProgress] = useState(0);
  const [isSimulating, setIsSimulating] = useState(false);
- const [gallery, setGallery] = useState([]);
 
- const refreshImageUrl = async (path) => {
-  const imageRef = ref(storage, path);
-  return await getDownloadURL(imageRef);
-};
-
-useEffect(() => {
-  const galleryRef = dbRef(database, 'gallery');
-  onValue(galleryRef, async (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      const galleryArray = await Promise.all(
-        Object.entries(data).map(async ([key, value]) => {
-          const imagePath = `generated_images/${value.imageUrl.split('/').pop().split('?')[0]}`;
-          const newUrl = await refreshImageUrl(imagePath);
-          return {
-            id: key,
-            ...value,
-            imageUrl: newUrl
-          };
-        })
-      );
-      setGallery(galleryArray.sort((a, b) => b.timestamp - a.timestamp));
-    }
-  });
-}, []);
  useEffect(() => {
    let interval;
    if (isSimulating && simulatedProgress < 100) {
@@ -161,18 +133,6 @@ useEffect(() => {
 
      <section className="gallery-section">
        <h2>Generated Images</h2>
-       <div className="image-gallery">
-         {gallery.map((item) => (
-           <div key={item.id} className="gallery-item">
-             <img 
-               src={item.imageUrl} 
-               alt={item.prompt} 
-               className="gallery-image" 
-             />
-             <div className="image-prompt">{item.prompt}</div>
-           </div>
-         ))}
-       </div>
      </section>
    </div>
  );
