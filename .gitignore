@@ -30,3 +30,6 @@ yarn-error.log*
 # environment files with secrets
 .env
 **/.env
+
+# Firebase deploy cache
+.firebase/
