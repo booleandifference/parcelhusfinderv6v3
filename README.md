@@ -1,70 +1,88 @@
-# Getting Started with Create React App
+# Parcelhus Finder
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A research project by Morten Sylvest Nøhr about the Danish *parcelhus*, the detached single-family house that became the everyday home of postwar Denmark.
 
-## Available Scripts
+Live site: https://parcelhusfinderv6v3.web.app
 
-In the project directory, you can run:
+## What it does
 
-### `npm start`
+- **Create a parcelhus**: describe a house ("yellow brick, large windows, flat roof…") and an AI model generates a photo of it. The generator uses FLUX with a custom LoRA trained on images of Danish parcelhuse. The *How much parcelhus?* slider sets how strongly the LoRA style is applied.
+- **Gallery**: every generated image is saved with its prompt and shown in a shared gallery, newest first.
+- **Explore a neighbourhood**: opens Google Street View in a random Danish parcelhus neighbourhood (one of nine towns between Slagelse and Spjald).
+- **Podcast**: an 8-minute podcast on the history of the parcelhus, made with Google NotebookLM.
+- **Info page**: background on the parcelhus and the source material.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## How it works
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
+React app (Firebase Hosting)
+  ├─ POST /api/generate-image ─► Cloud Function "api" ─► fal.ai flux-lora + Parcelhus LoRA
+  │                                   └─ saves image to Firebase Storage, returns its URL
+  ├─ GET  /api/get-audio-file ─► Cloud Function "api" ─► streams the podcast from Storage
+  └─ reads/writes the gallery ─► Firebase Realtime Database
+```
 
-### `npm test`
+| Part | Where |
+|---|---|
+| Frontend (React, Create React App) | `src/` |
+| Backend (one Express app as a 1st-gen Cloud Function, Node 22) | `functions/index.js` |
+| Generated images | Firebase Storage, `generated_images/` |
+| Podcast | Firebase Storage, `audio/Parcelhus_history.wav` (local copy in `audio/`) |
+| Gallery entries (prompt, image URL, timestamp) | Realtime Database, `gallery/` |
+| LoRA training config | `LORA/` |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Firebase project: `parcelhusfinderv6v3` (needs the Blaze plan for Cloud Functions and Storage).
 
-### `npm run build`
+### The Parcelhus LoRA
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Trained with `fal-ai/flux-lora-fast-training` in September 2024. The trigger word is `&SHUFL`, and the backend adds it to every prompt. The weights (`pytorch_lora_weights.safetensors`, 164 MB) are loaded from fal.ai's storage. A backup copy goes in `LORA/`, which git ignores because the file is too large for GitHub.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Development
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Requirements: Node 22, the Firebase CLI (`npm i -g firebase-tools`), and access to the Firebase project.
 
-### `npm run eject`
+```bash
+npm install
+cd functions && npm install && cd ..
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Create a `.env` in the project root with the Firebase web config (from the Firebase console → Project settings → Your apps):
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+REACT_APP_FIREBASE_API_KEY=
+REACT_APP_FIREBASE_AUTH_DOMAIN=
+REACT_APP_FIREBASE_PROJECT_ID=
+REACT_APP_FIREBASE_STORAGE_BUCKET=
+REACT_APP_FIREBASE_DATABASE_URL=
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=
+REACT_APP_FIREBASE_APP_ID=
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The fal.ai API key is only used by the backend and is stored as a Firebase secret, never in the frontend:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+firebase functions:secrets:set FAL_KEY
+```
 
-## Learn More
+Run the frontend locally (it calls the deployed backend):
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm start
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Deploy
 
-### Code Splitting
+```bash
+npm run build
+firebase deploy --only functions:api,hosting
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Maintenance
 
-### Analyzing the Bundle Size
+`functions/scripts/fix-gallery-urls.js` repairs gallery image links that stopped working. It was used once in 2026 to replace old signed URLs; new images use permanent Firebase download URLs. Run it without arguments for a dry run, and with `--apply` to make the changes.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Credits
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Concept and design: Morten Sylvest Nøhr: [stofogluft.dk](https://stofogluft.dk/)
+- Image generation: [FLUX](https://fal.ai) via fal.ai
+- Podcast: Google NotebookLM, based on material from Baggrund.com, Bolius.dk and Arbejdermuseet
