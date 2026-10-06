@@ -21,3 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# large local assets (LoRA weights exceed GitHub 100 MB limit; media/research files)
+*.safetensors
+/02 parcelhus finder files/
+*.zip
