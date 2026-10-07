@@ -28,5 +28,11 @@
     "environment": {
       "REACT_APP_FLUX_API_KEY": "${flux.api_key}"
     }
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

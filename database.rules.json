@@ -1,0 +1,10 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "gallery": {
+      ".read": true,
+      ".indexOn": ["timestamp"]
+    }
+  }
+}

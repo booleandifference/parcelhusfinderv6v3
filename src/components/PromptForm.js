@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref as dbRef, push } from "firebase/database";
 import ImageDisplay from './ImageDisplay';
 import axios from 'axios';
 import './PromptForm.css';
-
-const firebaseConfig = {
- apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
- authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
- projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
- databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
- storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET
-};
-
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
 
 function PromptForm() {
  const [prompt, setPrompt] = useState('');
@@ -61,13 +48,6 @@ function PromptForm() {
      });
      const { imageUrl, firebaseUrl } = response.data;
      setGeneratedImageUrl(firebaseUrl || imageUrl);
-
-     const galleryRef = dbRef(database, 'gallery');
-     await push(galleryRef, {
-       imageUrl: firebaseUrl || imageUrl,
-       prompt: prompt,
-       timestamp: Date.now()
-     });
 
      setSimulatedProgress(100);
    } catch (error) {
